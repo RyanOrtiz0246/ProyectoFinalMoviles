@@ -19,36 +19,20 @@ class UserService {
     return doc.id;
   }
 
-  // Obtener todos los usuarios
-  Stream<QuerySnapshot> getAllUsers() {
-    return usersRef.orderBy("createdAt", descending: true).snapshots();
-  }
-
-  // Obtener usuarios por rol
-  Stream<QuerySnapshot> getUsersByRole(String role) {
-    return usersRef
-        .where("role", isEqualTo: role)
-        .orderBy("createdAt", descending: true)
-        .snapshots();
-  }
-
   // Obtener un usuario por id
   Future<DocumentSnapshot> getUserById(String id) {
     return usersRef.doc(id).get();
   }
 
-  // Escuchar cambios de un usuario por id
-  Stream<DocumentSnapshot> streamUserById(String id) {
-    return usersRef.doc(id).snapshots();
-  }
+  Future<String> getUserName(String id) async {
+    final snapshot = await getUserById(id);
 
-  // Actualizar usuario
-  Future<void> updateUser(String id, Map<String, dynamic> data) async {
-    await usersRef.doc(id).update(data);
-  }
+    // documento no existe
+    if (!snapshot.exists) {
+      return "Desconocido";
+    }
 
-  // Eliminar usuario
-  Future<void> deleteUser(String id) async {
-    await usersRef.doc(id).delete();
+    final data = snapshot.data() as Map<String, dynamic>?;
+    return data?['name'];
   }
 }

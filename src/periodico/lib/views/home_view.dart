@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 // Ajusta la importación según la ubicación real de news_service.dart
 import 'package:periodico/services/news_service.dart';
+import 'package:periodico/services/user_service.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -19,6 +20,7 @@ class _HomeViewState extends State<HomeView> {
   String? _error;
 
   final NewsService _newsService = NewsService();
+  final UserService _userService = UserService();
 
   List<String> get _categories {
     final cats = <String>{'Todas'};
@@ -58,8 +60,11 @@ class _HomeViewState extends State<HomeView> {
     try {
       final stream = _newsService.getAllNews();
       final snapshot = await stream.first;
-      final List<Map<String, String>> data = snapshot.docs.map((doc) {
+
+      // Mapeamos a Future<Map> y luego esperamos todos
+      final futures = snapshot.docs.map((doc) async {
         final map = doc.data() as Map<String, dynamic>;
+
         // createdAt puede ser Timestamp o DateTime o null
         String time = '';
         final created = map['createdAt'];
@@ -72,17 +77,33 @@ class _HomeViewState extends State<HomeView> {
             time = created.toString();
           }
         }
-        return {
+
+        // Asegúrate de convertir authorId a String y prevenir null
+        final authorId = (map['authorId'] ?? '').toString();
+
+        // Esperamos el nombre del autor (esta llamada es async)
+        String authorName;
+        try {
+          authorName = await _userService.getUserName(authorId);
+        } catch (_) {
+          authorName = 'Desconocido';
+        }
+
+        return <String, String>{
           'id': doc.id,
           'title': (map['title'] ?? '').toString(),
           'subtitle': (map['subtitle'] ?? '').toString(),
           'content': (map['content'] ?? '').toString(),
           'imageUrl': (map['imageUrl'] ?? '').toString(),
           'category': (map['category'] ?? '').toString(),
-          'authorId': (map['authorId'] ?? '').toString(),
+          'authorName': authorName,
           'time': time,
         };
       }).toList();
+
+      // Await all los futures en paralelo
+      final List<Map<String, String>> data = await Future.wait(futures);
+
       if (!mounted) return;
       setState(() {
         _articles = data;
@@ -104,20 +125,20 @@ class _HomeViewState extends State<HomeView> {
     await _loadArticles();
   }
 
-  void _showFullContent(Map<String, String> a) {
+  void _showFullContent(Map<String, String> article) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text(a['title'] ?? ''),
+        title: Text(article['title'] ?? ''),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if ((a['imageUrl'] ?? '').isNotEmpty)
+              if ((article['imageUrl'] ?? '').isNotEmpty)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
-                    a['imageUrl']!,
+                    article['imageUrl']!,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Container(
                       height: 120,
@@ -128,22 +149,22 @@ class _HomeViewState extends State<HomeView> {
                 ),
               const SizedBox(height: 8),
               Text(
-                a['subtitle'] ?? '',
+                article['subtitle'] ?? '',
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
-              Text(a['content'] ?? ''),
+              Text(article['content'] ?? ''),
               const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
                     child: Text(
-                      'Autor: ${a['authorId'] ?? 'Desconocido'}',
+                      'Autor: ${article['authorName'] ?? ''}',
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                   ),
                   Text(
-                    a['time'] ?? '',
+                    article['time'] ?? '',
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
@@ -336,7 +357,7 @@ class _HomeViewState extends State<HomeView> {
                                                 const SizedBox(width: 10),
                                                 Expanded(
                                                   child: Text(
-                                                    'Autor: ${a['authorId'] ?? 'Desconocido'}',
+                                                    'Autor: ${a['authorName'] ?? ''}',
                                                     style: TextStyle(
                                                       fontSize: 12,
                                                       color: Colors.grey[500],
