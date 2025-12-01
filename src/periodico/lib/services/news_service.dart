@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class NewsService {
-  final CollectionReference newsRef =
-  FirebaseFirestore.instance.collection('news');
+  final CollectionReference newsRef = FirebaseFirestore.instance.collection(
+    'news',
+  );
 
   // Agregar noticia
   Future<String> createNews({
@@ -14,13 +15,13 @@ class NewsService {
     required String authorId,
   }) async {
     final doc = await newsRef.add({
-      "title": title,
-      "subtitle": subtitle,
-      "content": content,
-      "category": category,
-      "imageUrl": imageUrl,
       "authorId": authorId,
+      "category": category,
+      "content": content,
       "createdAt": FieldValue.serverTimestamp(),
+      "imageUrl": imageUrl,
+      "subtitle": subtitle,
+      "title": title,
     });
 
     return doc.id;
@@ -55,18 +56,5 @@ class NewsService {
   // Eliminar noticia
   Future<void> deleteNews(String id) async {
     await newsRef.doc(id).delete();
-  }
-
-  // Insertar una noticia de ejemplo
-  Future<void> seedExample() async {
-    await createNews(
-      title: "Noticia de ejemplo",
-      subtitle: "Subtítulo de prueba",
-      content: "Contenido de test para comprobar la base de datos.",
-      category: "general",
-      imageUrl:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/News.jpg/640px-News.jpg",
-      authorId: "admin",
-    );
   }
 }
