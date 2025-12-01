@@ -1,16 +1,371 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+// Ajusta la importación según la ubicación real de news_service.dart
+import 'package:periodico/services/news_service.dart';
 
-class HomeView extends StatelessWidget {
+class HomeView extends StatefulWidget {
   const HomeView({super.key});
+
+  @override
+  State<HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<HomeView> {
+  String _query = '';
+  String _selectedCategory = 'Todas';
+
+  List<Map<String, String>> _articles = [];
+  bool _loading = true;
+  String? _error;
+
+  final NewsService _newsService = NewsService();
+
+  List<String> get _categories {
+    final cats = <String>{'Todas'};
+    for (var a in _articles) {
+      final c = a['category'] ?? '';
+      if (c.isNotEmpty) cats.add(c);
+    }
+    return cats.toList();
+  }
+
+  List<Map<String, String>> get _filtered {
+    return _articles.where((a) {
+      final matchesQuery =
+          _query.isEmpty ||
+          (a['title'] ?? '').toLowerCase().contains(_query.toLowerCase()) ||
+          (a['subtitle'] ?? '').toLowerCase().contains(_query.toLowerCase()) ||
+          (a['content'] ?? '').toLowerCase().contains(_query.toLowerCase()) ||
+          (a['authorId'] ?? '').toLowerCase().contains(_query.toLowerCase());
+      final matchesCategory =
+          _selectedCategory == 'Todas' || a['category'] == _selectedCategory;
+      return matchesQuery && matchesCategory;
+    }).toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadArticles();
+  }
+
+  Future<void> _loadArticles() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final stream = _newsService.getAllNews();
+      final snapshot = await stream.first;
+      final List<Map<String, String>> data = snapshot.docs.map((doc) {
+        final map = doc.data() as Map<String, dynamic>;
+        // createdAt puede ser Timestamp o DateTime o null
+        String time = '';
+        final created = map['createdAt'];
+        if (created != null) {
+          if (created is Timestamp) {
+            time = created.toDate().toLocal().toString().split('.').first;
+          } else if (created is DateTime) {
+            time = created.toLocal().toString().split('.').first;
+          } else {
+            time = created.toString();
+          }
+        }
+        return {
+          'id': doc.id,
+          'title': (map['title'] ?? '').toString(),
+          'subtitle': (map['subtitle'] ?? '').toString(),
+          'content': (map['content'] ?? '').toString(),
+          'imageUrl': (map['imageUrl'] ?? '').toString(),
+          'category': (map['category'] ?? '').toString(),
+          'authorId': (map['authorId'] ?? '').toString(),
+          'time': time,
+        };
+      }).toList();
+      if (!mounted) return;
+      setState(() {
+        _articles = data;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Error al cargar noticias';
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _refresh() async {
+    await _loadArticles();
+  }
+
+  void _showFullContent(Map<String, String> a) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(a['title'] ?? ''),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if ((a['imageUrl'] ?? '').isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    a['imageUrl']!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 120,
+                      color: Colors.grey,
+                      child: const Icon(Icons.image_not_supported),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 8),
+              Text(
+                a['subtitle'] ?? '',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Text(a['content'] ?? ''),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Autor: ${a['authorId'] ?? 'Desconocido'}',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ),
+                  Text(
+                    a['time'] ?? '',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Inicio")),
-      body: const Center(
-        child: Text(
-          "Firebase iniciado correctamente",
-          style: TextStyle(fontSize: 18),
+      appBar: AppBar(
+        title: const Text('Portal de Noticias'),
+        centerTitle: false,
+        elevation: 0,
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 12.0,
+              ),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: 'Buscar noticias, temas o autores',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(context).brightness == Brightness.light
+                      ? Colors.grey[100]
+                      : Colors.grey[900],
+                ),
+                onChanged: (v) => setState(() => _query = v),
+              ),
+            ),
+            SizedBox(
+              height: 44,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                scrollDirection: Axis.horizontal,
+                itemCount: _categories.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, i) {
+                  final cat = _categories[i];
+                  final selected = cat == _selectedCategory;
+                  return ChoiceChip(
+                    label: Text(cat),
+                    selected: selected,
+                    onSelected: (_) => setState(() => _selectedCategory = cat),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: _loading && _articles.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null && _articles.isEmpty
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        const SizedBox(height: 80),
+                        Center(
+                          child: Column(
+                            children: [
+                              Text(
+                                _error!,
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                              const SizedBox(height: 12),
+                              ElevatedButton(
+                                onPressed: _loadArticles,
+                                child: const Text('Reintentar'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _refresh,
+                      child: _filtered.isEmpty
+                          ? ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              children: const [
+                                SizedBox(height: 80),
+                                Center(
+                                  child: Text(
+                                    'No se encontraron noticias',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : ListView.separated(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              itemCount: _filtered.length,
+                              separatorBuilder: (_, __) =>
+                                  const Divider(height: 12),
+                              itemBuilder: (context, index) {
+                                final a = _filtered[index];
+                                return InkWell(
+                                  onTap: () => _showFullContent(a),
+                                  child: Row(
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: (a['imageUrl'] ?? '').isNotEmpty
+                                            ? Image.network(
+                                                a['imageUrl']!,
+                                                width: 110,
+                                                height: 70,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, __, ___) =>
+                                                    Container(
+                                                      width: 110,
+                                                      height: 70,
+                                                      color: Colors.grey,
+                                                      child: const Icon(
+                                                        Icons
+                                                            .image_not_supported,
+                                                      ),
+                                                    ),
+                                              )
+                                            : Container(
+                                                width: 110,
+                                                height: 70,
+                                                color: Colors.grey[300],
+                                                child: const Icon(Icons.image),
+                                              ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              a['title'] ?? '',
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              a['subtitle'] ?? '',
+                                              style: TextStyle(
+                                                color: Colors.grey[600],
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              a['content'] ?? '',
+                                              style: TextStyle(
+                                                color: Colors.grey[700],
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  a['category'] ?? '',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.blueGrey[600],
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 10),
+                                                Expanded(
+                                                  child: Text(
+                                                    'Autor: ${a['authorId'] ?? 'Desconocido'}',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.grey[500],
+                                                    ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 10),
+                                                Text(
+                                                  a['time'] ?? '',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[500],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+            ),
+          ],
         ),
       ),
     );
