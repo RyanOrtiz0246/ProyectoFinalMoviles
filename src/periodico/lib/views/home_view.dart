@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 // Ajusta la importación según la ubicación real de news_service.dart
 import 'package:periodico/services/news_service.dart';
 import 'package:periodico/services/user_service.dart';
+import 'package:periodico/views/create_news_view.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -190,6 +191,23 @@ class _HomeViewState extends State<HomeView> {
         centerTitle: false,
         elevation: 0,
       ),
+
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          // Navegar a la pantalla de crear
+          final bool? result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CreateNewsView()),
+          );
+
+          // Si retornamos 'true', recargamos las noticias
+          if (result == true) {
+            _loadArticles();
+          }
+        },
+        child: const Icon(Icons.add),
+      ),
+      
       body: SafeArea(
         child: Column(
           children: [
