@@ -97,6 +97,7 @@ class _HomeViewState extends State<HomeView> {
           'content': (map['content'] ?? '').toString(),
           'imageUrl': (map['imageUrl'] ?? '').toString(),
           'category': (map['category'] ?? '').toString(),
+          'authorId': authorId, //Agregue aqui esta linea para poder editar luego
           'authorName': authorName,
           'time': time,
         };
@@ -126,7 +127,7 @@ class _HomeViewState extends State<HomeView> {
     await _loadArticles();
   }
 
-  void _showFullContent(Map<String, String> article) {
+void _showFullContent(Map<String, String> article) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -174,6 +175,66 @@ class _HomeViewState extends State<HomeView> {
           ),
         ),
         actions: [
+          // BOTÓN ELIMINAR
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () async {
+              // Confirmación simple
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (c) => AlertDialog(
+                  title: const Text('Confirmar Eliminación'),
+                  content: const Text(
+                      '¿Estás seguro de que deseas eliminar esta noticia? Esta acción no se puede deshacer.'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(c, false),
+                        child: const Text('Cancelar')),
+                    TextButton(
+                        onPressed: () => Navigator.pop(c, true),
+                        child: const Text('Eliminar',
+                            style: TextStyle(color: Colors.red))),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                // Borramos usando el ID
+                await _newsService.deleteNews(article['id']!);
+                if (mounted) {
+                  Navigator.pop(context); // Cerrar el diálogo de detalle
+                  _loadArticles(); // Recargar la lista
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Noticia eliminada')),
+                  );
+                }
+              }
+            },
+            child: const Text('Eliminar'),
+          ),
+
+          // BOTÓN EDITAR
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // Cerrar el diálogo de detalle primero
+
+              // Navegar a la pantalla de crear, pero enviando la noticia para editar
+              final bool? result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      CreateNewsView(article: article), // Pasamos la noticia
+                ),
+              );
+
+              if (result == true) {
+                _loadArticles(); // Recargamos si hubo cambios
+              }
+            },
+            child: const Text('Editar'),
+          ),
+
+          // BOTÓN CERRAR
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cerrar'),
@@ -207,7 +268,7 @@ class _HomeViewState extends State<HomeView> {
         },
         child: const Icon(Icons.add),
       ),
-      
+
       body: SafeArea(
         child: Column(
           children: [

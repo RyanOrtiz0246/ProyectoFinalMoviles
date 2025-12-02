@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:periodico/services/news_service.dart';
 
 class CreateNewsView extends StatefulWidget {
-  const CreateNewsView({super.key});
+  final Map<String, String>? article;
+  const CreateNewsView({super.key, this.article});
 
   @override
   State<CreateNewsView> createState() => _CreateNewsViewState();
@@ -17,47 +18,77 @@ class _CreateNewsViewState extends State<CreateNewsView> {
   final TextEditingController _subtitleCtrl = TextEditingController();
   final TextEditingController _contentCtrl = TextEditingController();
   final TextEditingController _imageUrlCtrl = TextEditingController();
-  
-  // Por simplicidad, usaremos un ID manual o fijo, ya que no hay sistema de Auth completo visible aún.
-  // Puedes cambiar esto por el ID del usuario logueado si implementas Auth más adelante.
-  final TextEditingController _authorIdCtrl = TextEditingController(); 
-
-  // Categorías según tu DATABASE.md
+  final TextEditingController _authorIdCtrl = TextEditingController();
+ 
+  // Categorías según la DATABASE.md
   final List<String> _categories = [
     'general',
     'deportes',
     'economía',
-    'internacional'
+    'internacional',
+    'tecnologia'
   ];
   String? _selectedCategory;
 
   bool _isLoading = false;
 
+@override
+  void initState() {
+    super.initState();
+    // Si recibimos una noticia, rellenamos los campos
+    if (widget.article != null) {
+      _titleCtrl.text = widget.article!['title'] ?? '';
+      _subtitleCtrl.text = widget.article!['subtitle'] ?? '';
+      _contentCtrl.text = widget.article!['content'] ?? '';
+      _imageUrlCtrl.text = widget.article!['imageUrl'] ?? '';
+      _authorIdCtrl.text = widget.article!['authorId'] ?? '';
+      
+      // Validamos que la categoría exista en nuestra lista
+      if (_categories.contains(widget.article!['category'])) {
+        _selectedCategory = widget.article!['category'];
+      }
+    }
+  }
+
   Future<void> _submit() async {
     if (_formKey.currentState!.validate() && _selectedCategory != null) {
       setState(() => _isLoading = true);
 
-      try {
-        await _newsService.createNews(
-          title: _titleCtrl.text.trim(),
-          subtitle: _subtitleCtrl.text.trim(),
-          content: _contentCtrl.text.trim(),
-          category: _selectedCategory!,
-          imageUrl: _imageUrlCtrl.text.trim(),
-          authorId: _authorIdCtrl.text.trim(),
-        );
+     try {
+        final data = {
+          "title": _titleCtrl.text.trim(),
+          "subtitle": _subtitleCtrl.text.trim(),
+          "content": _contentCtrl.text.trim(),
+          "category": _selectedCategory!,
+          "imageUrl": _imageUrlCtrl.text.trim(),
+          "authorId": _authorIdCtrl.text.trim(),
+        };
+
+        if (widget.article == null) {
+          // --- MODO CREAR ---
+          await _newsService.createNews(
+            title: data["title"]!,
+            subtitle: data["subtitle"]!,
+            content: data["content"]!,
+            category: data["category"]!,
+            imageUrl: data["imageUrl"]!,
+            authorId: data["authorId"]!,
+          );
+        } else {
+          // --- MODO EDITAR ---
+          // Usamos el ID del documento para actualizar
+          await _newsService.updateNews(widget.article!['id']!, data);
+        }
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Noticia creada con éxito')),
+            SnackBar(content: Text(widget.article == null ? 'Creada' : 'Actualizada')),
           );
-          Navigator.pop(context, true); // Retorna true para indicar que se creó algo
+          Navigator.pop(context, true); // Volver y recargar
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
         }
       } finally {
         if (mounted) setState(() => _isLoading = false);
@@ -82,7 +113,9 @@ class _CreateNewsViewState extends State<CreateNewsView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Crear Noticia')),
+      appBar: AppBar(
+        title: Text(widget.article == null ? 'Crear Noticia' : 'Editar Noticia')
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(

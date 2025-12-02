@@ -13,12 +13,6 @@
     - createdAt: Timestamp
 - Documento de prueba: test1
 
-### /categories
-- general
-- deportes
-- economía
-- internacional
-
 ### /users
 - admin
     - name: "Administrador"
