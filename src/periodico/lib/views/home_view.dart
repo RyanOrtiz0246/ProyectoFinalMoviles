@@ -266,9 +266,81 @@ class _HomeViewState extends State<HomeView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Portal de Noticias'),
-        centerTitle: false,
-        elevation: 0,
+        toolbarHeight: 100, // Altura suficiente para la info extra
+        backgroundColor: Colors.white, // Fondo blanco clásico
+        centerTitle: true,
+        elevation: 0, // Sin sombra (diseño plano)
+        titleSpacing: 0, // Usamos todo el ancho
+        title: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          width: double.infinity,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // --- FILA SUPERIOR: Fecha y Usuario ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Fecha de hoy (Texto gris)
+                  Text(
+                    "${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}",
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  // Usuario (Icono y nombre)
+                  Row(
+                    children: const [
+                      Icon(Icons.person, size: 16, color: Colors.grey),
+                      SizedBox(width: 4),
+                      Text(
+                        "Hola, Jimenez", // Nombre estático
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 8), // Espacio
+              
+              // --- TÍTULO PRINCIPAL (Estilo Periódico) ---
+              const Text(
+                'EL PERIÓDICO',
+                style: TextStyle(
+                  fontFamily: 'serif',
+                  fontSize: 34,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black, // Texto Negro
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'NOTICIAS AL INSTANTE',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey, // Texto Gris
+                  letterSpacing: 3.0,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Línea divisoria negra abajo
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(
+            color: Colors.black,
+            height: 2.0,
+          ),
+        ),
       ),
 
       floatingActionButton: FloatingActionButton(
