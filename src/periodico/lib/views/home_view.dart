@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// Ajusta la importación según la ubicación real de news_service.dart
+
+// Ajusta la importación según la ubicación real de tus servicios y modelos.
+// Yo asumí que tienes una carpeta services donde vivien los servicios.
 import 'package:periodico/services/news_service.dart';
 import 'package:periodico/services/user_service.dart';
 import 'package:periodico/views/create_news_view.dart';
+import 'package:periodico/views/news_detail_modal.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -98,7 +101,7 @@ class _HomeViewState extends State<HomeView> {
           'imageUrl': (map['imageUrl'] ?? '').toString(),
           'category': (map['category'] ?? '').toString(),
           'authorId':
-              authorId, //Agregue aqui esta linea para poder editar luego
+              authorId, //Agregue aquí esta linea para poder editar luego
           'authorName': authorName,
           'time': time,
         };
@@ -176,11 +179,24 @@ class _HomeViewState extends State<HomeView> {
           ),
         ),
         actions: [
+          // 💬 NUEVO BOTÓN PARA ABRIR EL MODAL DE COMENTARIOS
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Cierra este modal primero
+              NewsDetailModal.show(
+                context,
+                newsId: article['id']!,
+                title: article['title']!,
+                body: article['content'],
+              );
+            },
+            child: const Text('Ver comentarios'),
+          ),
+
           // BOTÓN ELIMINAR
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () async {
-              // Confirmación simple
               final confirm = await showDialog<bool>(
                 context: context,
                 builder: (c) => AlertDialog(
@@ -205,11 +221,10 @@ class _HomeViewState extends State<HomeView> {
               );
 
               if (confirm == true) {
-                // Borramos usando el ID
                 await _newsService.deleteNews(article['id']!);
                 if (mounted) {
-                  Navigator.pop(context); // Cerrar el diálogo de detalle
-                  _loadArticles(); // Recargar la lista
+                  Navigator.pop(context);
+                  _loadArticles();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Noticia eliminada')),
                   );
@@ -222,19 +237,16 @@ class _HomeViewState extends State<HomeView> {
           // BOTÓN EDITAR
           TextButton(
             onPressed: () async {
-              Navigator.pop(context); // Cerrar el diálogo de detalle primero
-
-              // Navegar a la pantalla de crear, pero enviando la noticia para editar
+              Navigator.pop(context);
               final bool? result = await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) =>
-                      CreateNewsView(article: article), // Pasamos la noticia
+                  builder: (_) => CreateNewsView(article: article),
                 ),
               );
 
               if (result == true) {
-                _loadArticles(); // Recargamos si hubo cambios
+                _loadArticles();
               }
             },
             child: const Text('Editar'),
