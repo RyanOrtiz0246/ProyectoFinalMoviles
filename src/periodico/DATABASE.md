@@ -11,7 +11,7 @@
     - imageUrl: string
     - authorId: string
     - createdAt: Timestamp
-- Documento de prueba: test1
+- Documento de prueba inicial: test1
 
 ### /users
 - Campos
