@@ -19,20 +19,20 @@ class _CreateNewsViewState extends State<CreateNewsView> {
   final TextEditingController _contentCtrl = TextEditingController();
   final TextEditingController _imageUrlCtrl = TextEditingController();
   final TextEditingController _authorIdCtrl = TextEditingController();
- 
+
   // Categorías según la DATABASE.md
   final List<String> _categories = [
     'general',
     'deportes',
     'economía',
     'internacional',
-    'tecnologia'
+    'tecnologia',
   ];
   String? _selectedCategory;
 
   bool _isLoading = false;
 
-@override
+  @override
   void initState() {
     super.initState();
     // Si recibimos una noticia, rellenamos los campos
@@ -42,7 +42,7 @@ class _CreateNewsViewState extends State<CreateNewsView> {
       _contentCtrl.text = widget.article!['content'] ?? '';
       _imageUrlCtrl.text = widget.article!['imageUrl'] ?? '';
       _authorIdCtrl.text = widget.article!['authorId'] ?? '';
-      
+
       // Validamos que la categoría exista en nuestra lista
       if (_categories.contains(widget.article!['category'])) {
         _selectedCategory = widget.article!['category'];
@@ -54,7 +54,7 @@ class _CreateNewsViewState extends State<CreateNewsView> {
     if (_formKey.currentState!.validate() && _selectedCategory != null) {
       setState(() => _isLoading = true);
 
-     try {
+      try {
         final data = {
           "title": _titleCtrl.text.trim(),
           "subtitle": _subtitleCtrl.text.trim(),
@@ -82,13 +82,17 @@ class _CreateNewsViewState extends State<CreateNewsView> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(widget.article == null ? 'Creada' : 'Actualizada')),
+            SnackBar(
+              content: Text(widget.article == null ? 'Creada' : 'Actualizada'),
+            ),
           );
           Navigator.pop(context, true); // Volver y recargar
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error: $e')));
         }
       } finally {
         if (mounted) setState(() => _isLoading = false);
@@ -114,7 +118,9 @@ class _CreateNewsViewState extends State<CreateNewsView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.article == null ? 'Crear Noticia' : 'Editar Noticia')
+        title: Text(
+          widget.article == null ? 'Crear Noticia' : 'Editar Noticia',
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -152,7 +158,9 @@ class _CreateNewsViewState extends State<CreateNewsView> {
               const SizedBox(height: 10),
               TextFormField(
                 controller: _imageUrlCtrl,
-                decoration: const InputDecoration(labelText: 'URL de la Imagen'),
+                decoration: const InputDecoration(
+                  labelText: 'URL de la Imagen',
+                ),
                 validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
               ),
               const SizedBox(height: 10),
@@ -160,7 +168,8 @@ class _CreateNewsViewState extends State<CreateNewsView> {
                 controller: _authorIdCtrl,
                 decoration: const InputDecoration(
                   labelText: 'ID del Autor (ej: usuario1)',
-                  helperText: 'Debe existir en la colección users para ver el nombre',
+                  helperText:
+                      'Debe existir en la colección users para ver el nombre',
                 ),
                 validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
               ),

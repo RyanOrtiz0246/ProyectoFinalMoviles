@@ -97,7 +97,8 @@ class _HomeViewState extends State<HomeView> {
           'content': (map['content'] ?? '').toString(),
           'imageUrl': (map['imageUrl'] ?? '').toString(),
           'category': (map['category'] ?? '').toString(),
-          'authorId': authorId, //Agregue aqui esta linea para poder editar luego
+          'authorId':
+              authorId, //Agregue aqui esta linea para poder editar luego
           'authorName': authorName,
           'time': time,
         };
@@ -127,7 +128,7 @@ class _HomeViewState extends State<HomeView> {
     await _loadArticles();
   }
 
-void _showFullContent(Map<String, String> article) {
+  void _showFullContent(Map<String, String> article) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -185,15 +186,20 @@ void _showFullContent(Map<String, String> article) {
                 builder: (c) => AlertDialog(
                   title: const Text('Confirmar Eliminación'),
                   content: const Text(
-                      '¿Estás seguro de que deseas eliminar esta noticia? Esta acción no se puede deshacer.'),
+                    '¿Estás seguro de que deseas eliminar esta noticia? Esta acción no se puede deshacer.',
+                  ),
                   actions: [
                     TextButton(
-                        onPressed: () => Navigator.pop(c, false),
-                        child: const Text('Cancelar')),
+                      onPressed: () => Navigator.pop(c, false),
+                      child: const Text('Cancelar'),
+                    ),
                     TextButton(
-                        onPressed: () => Navigator.pop(c, true),
-                        child: const Text('Eliminar',
-                            style: TextStyle(color: Colors.red))),
+                      onPressed: () => Navigator.pop(c, true),
+                      child: const Text(
+                        'Eliminar',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
                   ],
                 ),
               );
