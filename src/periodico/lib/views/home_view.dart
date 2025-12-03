@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// Ajusta la importación según la ubicación real de news_service.dart
+
+// Ajusta la importación según la ubicación real de tus servicios y modelos.
+// Yo asumí que tienes una carpeta services donde vivien los servicios.
 import 'package:periodico/services/news_service.dart';
 import 'package:periodico/services/user_service.dart';
 import 'package:periodico/views/create_news_view.dart';
+import 'package:periodico/views/news_detail_modal.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -98,7 +101,7 @@ class _HomeViewState extends State<HomeView> {
           'imageUrl': (map['imageUrl'] ?? '').toString(),
           'category': (map['category'] ?? '').toString(),
           'authorId':
-              authorId, //Agregue aqui esta linea para poder editar luego
+              authorId, //Agregue aquí esta linea para poder editar luego
           'authorName': authorName,
           'time': time,
         };
@@ -176,11 +179,24 @@ class _HomeViewState extends State<HomeView> {
           ),
         ),
         actions: [
+          // 💬 NUEVO BOTÓN PARA ABRIR EL MODAL DE COMENTARIOS
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Cierra este modal primero
+              NewsDetailModal.show(
+                context,
+                newsId: article['id']!,
+                title: article['title']!,
+                body: article['content'],
+              );
+            },
+            child: const Text('Ver comentarios'),
+          ),
+
           // BOTÓN ELIMINAR
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () async {
-              // Confirmación simple
               final confirm = await showDialog<bool>(
                 context: context,
                 builder: (c) => AlertDialog(
@@ -205,11 +221,10 @@ class _HomeViewState extends State<HomeView> {
               );
 
               if (confirm == true) {
-                // Borramos usando el ID
                 await _newsService.deleteNews(article['id']!);
                 if (mounted) {
-                  Navigator.pop(context); // Cerrar el diálogo de detalle
-                  _loadArticles(); // Recargar la lista
+                  Navigator.pop(context);
+                  _loadArticles();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Noticia eliminada')),
                   );
@@ -222,19 +237,16 @@ class _HomeViewState extends State<HomeView> {
           // BOTÓN EDITAR
           TextButton(
             onPressed: () async {
-              Navigator.pop(context); // Cerrar el diálogo de detalle primero
-
-              // Navegar a la pantalla de crear, pero enviando la noticia para editar
+              Navigator.pop(context);
               final bool? result = await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) =>
-                      CreateNewsView(article: article), // Pasamos la noticia
+                  builder: (_) => CreateNewsView(article: article),
                 ),
               );
 
               if (result == true) {
-                _loadArticles(); // Recargamos si hubo cambios
+                _loadArticles();
               }
             },
             child: const Text('Editar'),
@@ -254,9 +266,81 @@ class _HomeViewState extends State<HomeView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Portal de Noticias'),
-        centerTitle: false,
-        elevation: 0,
+        toolbarHeight: 100, // Altura suficiente para la info extra
+        backgroundColor: Colors.white, // Fondo blanco clásico
+        centerTitle: true,
+        elevation: 0, // Sin sombra (diseño plano)
+        titleSpacing: 0, // Usamos todo el ancho
+        title: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          width: double.infinity,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // --- FILA SUPERIOR: Fecha y Usuario ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Fecha de hoy (Texto gris)
+                  Text(
+                    "${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}",
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  // Usuario (Icono y nombre)
+                  Row(
+                    children: const [
+                      Icon(Icons.person, size: 16, color: Colors.grey),
+                      SizedBox(width: 4),
+                      Text(
+                        "Hola, Jimenez", // Nombre estático
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 8), // Espacio
+              
+              // --- TÍTULO PRINCIPAL (Estilo Periódico) ---
+              const Text(
+                'EL PERIÓDICO',
+                style: TextStyle(
+                  fontFamily: 'serif',
+                  fontSize: 34,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black, // Texto Negro
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'NOTICIAS AL INSTANTE',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey, // Texto Gris
+                  letterSpacing: 3.0,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Línea divisoria negra abajo
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(
+            color: Colors.black,
+            height: 2.0,
+          ),
+        ),
       ),
 
       floatingActionButton: FloatingActionButton(
