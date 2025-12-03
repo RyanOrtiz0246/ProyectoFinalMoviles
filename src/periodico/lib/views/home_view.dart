@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 // Ajusta la importación según la ubicación real de news_service.dart
 import 'package:periodico/services/news_service.dart';
 import 'package:periodico/services/user_service.dart';
+import 'package:periodico/views/create_news_view.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -96,6 +97,8 @@ class _HomeViewState extends State<HomeView> {
           'content': (map['content'] ?? '').toString(),
           'imageUrl': (map['imageUrl'] ?? '').toString(),
           'category': (map['category'] ?? '').toString(),
+          'authorId':
+              authorId, //Agregue aqui esta linea para poder editar luego
           'authorName': authorName,
           'time': time,
         };
@@ -173,6 +176,71 @@ class _HomeViewState extends State<HomeView> {
           ),
         ),
         actions: [
+          // BOTÓN ELIMINAR
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () async {
+              // Confirmación simple
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (c) => AlertDialog(
+                  title: const Text('Confirmar Eliminación'),
+                  content: const Text(
+                    '¿Estás seguro de que deseas eliminar esta noticia? Esta acción no se puede deshacer.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(c, false),
+                      child: const Text('Cancelar'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(c, true),
+                      child: const Text(
+                        'Eliminar',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                // Borramos usando el ID
+                await _newsService.deleteNews(article['id']!);
+                if (mounted) {
+                  Navigator.pop(context); // Cerrar el diálogo de detalle
+                  _loadArticles(); // Recargar la lista
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Noticia eliminada')),
+                  );
+                }
+              }
+            },
+            child: const Text('Eliminar'),
+          ),
+
+          // BOTÓN EDITAR
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // Cerrar el diálogo de detalle primero
+
+              // Navegar a la pantalla de crear, pero enviando la noticia para editar
+              final bool? result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      CreateNewsView(article: article), // Pasamos la noticia
+                ),
+              );
+
+              if (result == true) {
+                _loadArticles(); // Recargamos si hubo cambios
+              }
+            },
+            child: const Text('Editar'),
+          ),
+
+          // BOTÓN CERRAR
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cerrar'),
@@ -190,6 +258,23 @@ class _HomeViewState extends State<HomeView> {
         centerTitle: false,
         elevation: 0,
       ),
+
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          // Navegar a la pantalla de crear
+          final bool? result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CreateNewsView()),
+          );
+
+          // Si retornamos 'true', recargamos las noticias
+          if (result == true) {
+            _loadArticles();
+          }
+        },
+        child: const Icon(Icons.add),
+      ),
+
       body: SafeArea(
         child: Column(
           children: [
