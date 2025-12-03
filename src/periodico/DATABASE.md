@@ -13,12 +13,6 @@
     - createdAt: Timestamp
 - Documento de prueba inicial: test1
 
-### /categories
-- general
-- deportes
-- economía
-- internacional
-
 ### /users
 - Campos
     - name: string
