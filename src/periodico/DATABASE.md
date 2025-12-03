@@ -11,7 +11,7 @@
     - imageUrl: string
     - authorId: string
     - createdAt: Timestamp
-- Documento de prueba: test1
+- Documento de prueba inicial: test1
 
 ### /categories
 - general
@@ -20,6 +20,14 @@
 - internacional
 
 ### /users
-- admin
-    - name: "Administrador"
-    - role: "admin"
+- Campos
+    - name: string
+    - role: string
+- Documento existentes: admin 1-3, reportero 1-5, usuarios 1-5
+
+### /comments
+- Campos:
+    - userId: string
+    - newsId: string
+    - text: string
+    - date: Timestamp
